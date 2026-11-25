@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Netflix content dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap">
+<style>
+:root{--bg:#f6f4f4;--card:#fff;--ink:#1b1b1b;--mute:#6b6b6b;--line:#e4dfdf;--red:#e50914;--tv:#8a8a8a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141414;--card:#1f1f1f;--ink:#f3f3f3;--mute:#a0a0a0;--line:#333;--tv:#7d7d7d}}
+:root[data-theme="dark"]{--bg:#141414;--card:#1f1f1f;--ink:#f3f3f3;--mute:#a0a0a0;--line:#333;--tv:#7d7d7d}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+h1{font:400 clamp(40px,9vw,64px)/1 "Bebas Neue",Impact,sans-serif;letter-spacing:.02em;margin:0;color:var(--red)}
+.sub{color:var(--mute);margin:4px 0 18px}
+.tabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:16px}
+.tabs button{background:var(--card);color:var(--ink);border:0;padding:9px 18px;font:inherit;cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--red);color:#fff}
+.tabs button:focus-visible{outline:2px solid var(--ink);outline-offset:-3px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border-left:4px solid var(--red);padding:12px 14px;border-radius:4px}
+.kpi b{display:block;font:400 38px/1.1 "Bebas Neue",Impact,sans-serif;letter-spacing:.02em}
+.kpi span{color:var(--mute);font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
+.card.wide{grid-column:1/-1}
+h2{font-size:16px;margin:0 0 2px}
+.card p{margin:0 0 14px;color:var(--mute);font-size:13px}
+.cols{display:flex;align-items:flex-end;gap:8px;height:190px;border-bottom:1px solid var(--line)}
+.col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.col i{display:block;width:100%;max-width:44px;background:var(--red)}
+.col i.t{background:var(--tv)}
+.col em{font-style:normal;font-size:11px;color:var(--mute);margin-bottom:3px}
+.yrs{display:flex;gap:8px;margin-top:6px}
+.yrs span{flex:1;text-align:center;font-size:12px;color:var(--mute)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--mute);margin-top:10px}
+.legend s{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;text-decoration:none}
+.row{display:grid;grid-template-columns:minmax(90px,38%) 1fr 48px;gap:8px;align-items:center;margin:7px 0;font-size:13px}
+.row div{height:10px;background:var(--line);border-radius:5px;overflow:hidden}
+.row div i{display:block;height:100%;background:var(--red);border-radius:5px;transition:width .3s}
+.row span:last-child{text-align:right;color:var(--mute)}
+.row span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.split{display:flex;height:34px;border-radius:6px;overflow:hidden;margin:6px 0 8px}
+.split i{display:flex;align-items:center;padding-left:10px;color:#fff;font-size:13px;font-style:normal}
+.foot{color:var(--mute);font-size:12px;margin-top:18px}
+@media(prefers-reduced-motion:reduce){.row div i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Netflix content</h1>
+<p class="sub">What is in the catalog, when it was added, and where it comes from.</p>
+<div class="tabs" role="group" aria-label="Content type">
+<button data-f="all" aria-pressed="true">All titles</button>
+<button data-f="m" aria-pressed="false">Movies</button>
+<button data-f="t" aria-pressed="false">TV shows</button>
+</div>
+<section class="kpis" id="kpis"></section>
+<section class="grid">
+<div class="card wide"><h2>Titles added per year</h2><p>Count of titles added to the catalog each year.</p>
+<div class="cols" id="years"></div><div class="yrs" id="yl"></div>
+<div class="legend"><span><s style="background:var(--red)"></s>Movies</span><span><s style="background:var(--tv)"></s>TV shows</span></div></div>
+<div class="card"><h2>Top genres</h2><p>Titles per genre category.</p><div id="genres"></div></div>
+<div class="card"><h2>Top countries</h2><p>Titles by country of production.</p><div id="countries"></div></div>
+<div class="card"><h2>Movies vs TV shows</h2><p>Share of the whole catalog.</p><div class="split" id="split"></div></div>
+<div class="card"><h2>Maturity ratings</h2><p>Titles per rating.</p><div id="ratings"></div></div>
+</section>
+</main>
+<script>
+var D={
+years:[[2015,56,6],[2016,253,176],[2017,839,349],[2018,1237,411],[2019,1424,592],[2020,1284,595],[2021,993,505]],
+genres:[["International Movies",2752,"m"],["Dramas",2427,"m"],["Comedies",1674,"m"],["International TV Shows",1351,"t"],["Documentaries",869,"m"],["Action & Adventure",859,"m"],["TV Dramas",763,"t"],["Independent Movies",756,"m"],["Children & Family",641,"m"],["Romantic Movies",616,"m"],["TV Comedies",581,"t"],["Crime TV Shows",470,"t"],["Kids' TV",451,"t"],["Docuseries",395,"t"]],
+countries:[["United States",2818,1255],["India",962,84],["United Kingdom",534,271],["Canada",319,126],["France",303,90],["Japan",119,199],["Spain",171,61],["South Korea",61,170],["Germany",182,44],["Mexico",111,58]],
+ratings:[["TV-MA",2062,1145],["TV-14",1427,733],["TV-PG",540,323],["R",797,2],["PG-13",490,0],["TV-Y7",139,195],["TV-Y",131,176],["PG",287,0],["TV-G",126,94],["NR",75,5]]};
+var f="all",$=function(i){return document.getElementById(i)};
+function v(m,t){return f=="m"?m:f=="t"?t:m+t}
+function n(x){return x.toLocaleString("en-US")}
+function bars(id,list,fmt){var mx=Math.max.apply(null,list.map(function(r){return r[1]}));
+$(id).innerHTML=list.map(function(r){return '<div class="row"><span title="'+r[0]+'">'+r[0]+'</span><div><i style="width:'+(r[1]/mx*100)+'%"></i></div><span>'+n(r[1])+'</span></div>'}).join("")}
+function draw(){
+var M=D.years.reduce(function(a,r){return a+r[1]},0),T=D.years.reduce(function(a,r){return a+r[2]},0);
+var cm=D.countries.reduce(function(a,r){return a+r[1]},0);
+var peak=D.years.slice().sort(function(a,b){return v(b[1],b[2])-v(a[1],a[2])})[0];
+var tot=v(M,T);
+$("kpis").innerHTML=[[n(tot),"Titles in sample"],[peak[0],"Peak year ("+n(v(peak[1],peak[2]))+" added)"],["US","Top producing country"],[f=="t"?"TV-MA":"TV-MA","Most common rating"]].map(function(k){return '<div class="kpi"><b>'+k[0]+'</b><span>'+k[1]+'</span></div>'}).join("");
+var mx=Math.max.apply(null,D.years.map(function(r){return v(r[1],r[2])}));
+$("years").innerHTML=D.years.map(function(r){var a=f=="t"?0:r[1],b=f=="m"?0:r[2],h=function(x){return x/mx*150};
+return '<div class="col"><em>'+n(a+b)+'</em><i class="t" style="height:'+h(b)+'px"></i><i style="height:'+h(a)+'px"></i></div>'}).join("");
+$("yl").innerHTML=D.years.map(function(r){return '<span>'+r[0]+'</span>'}).join("");
+bars("genres",D.genres.filter(function(g){return f=="all"||g[2]==f}).slice(0,8));
+bars("countries",D.countries.map(function(c){return [c[0],v(c[1],c[2])]}).sort(function(a,b){return b[1]-a[1]}).slice(0,8));
+bars("ratings",D.ratings.map(function(c){return [c[0],v(c[1],c[2])]}).filter(function(c){return c[1]>0}).sort(function(a,b){return b[1]-a[1]}).slice(0,8));
+var mp=Math.round(M/(M+T)*100);
+$("split").innerHTML='<i style="width:'+mp+'%;background:var(--red)">Movies '+mp+'%</i><i style="width:'+(100-mp)+'%;background:var(--tv)">TV '+(100-mp)+'%</i>';
+}
+document.querySelectorAll(".tabs button").forEach(function(b){b.onclick=function(){f=b.dataset.f;document.querySelectorAll(".tabs button").forEach(function(x){x.setAttribute("aria-pressed",x==b)});draw()}});
+draw();
+</script>
+</body>
+</html>
